@@ -16,7 +16,7 @@ pub mod dexscreener;
 pub mod reasoning_loop;
 pub mod signer;
 
-#[ctor::ctor]
+// #[ctor::ctor]
 fn init() {
     dotenv::dotenv().ok();
     tracing_subscriber::fmt()
