@@ -100,7 +100,7 @@ pub async fn send_tx(tx: &Transaction) -> Result<String> {
 
     let signature = send_jito_tx(tx.clone()).await;
     if let Ok(signature) = &signature {
-        tracing::info!(?signature, "send_jito_tx");
+        tracing::debug!(?signature, "send_jito_tx");
     }
     match signature {
         Ok(signature) => Ok(signature),

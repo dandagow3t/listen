@@ -191,7 +191,7 @@ where
 {
     let signer = SignerContext::current().await;
     let owner = Pubkey::from_str(&signer.pubkey())?;
-    tracing::info!("signer: {:?}", owner.to_string());
+    tracing::debug!("signer: {:?}", owner.to_string());
 
     let mut ix = wrap_unsafe(move || async move { ix_creator(owner).await })
         .await
