@@ -612,7 +612,7 @@ pub fn parse_pump_accounts(
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PumpTokenInfo {
     pub associated_bonding_curve: String,
     pub bonding_curve: String,
@@ -621,18 +621,18 @@ pub struct PumpTokenInfo {
     pub creator: String,
     pub description: String,
     pub image_uri: String,
-    pub inverted: bool,
+    pub inverted: Option<bool>,
     pub is_currently_live: bool,
     pub king_of_the_hill_timestamp: i64,
     pub last_reply: i64,
     pub market_cap: f64,
-    pub market_id: String,
+    pub market_id: Option<String>,
     pub metadata_uri: String,
     pub mint: String,
     pub name: String,
     pub nsfw: bool,
     pub profile_image: Option<String>,
-    pub raydium_pool: String,
+    pub raydium_pool: Option<String>,
     pub reply_count: i32,
     pub show_name: bool,
     pub symbol: String,
@@ -644,6 +644,7 @@ pub struct PumpTokenInfo {
     pub virtual_sol_reserves: i64,
     pub virtual_token_reserves: i64,
     pub website: Option<String>,
+    pub video_uri: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -661,43 +662,24 @@ pub struct IPFSMetadata {
     pub website: Option<String>,
 }
 
-pub async fn fetch_metadata(mint: &Pubkey) -> Result<PumpTokenInfo> {
-    const MAX_RETRIES: u32 = 3;
-    const INITIAL_DELAY_MS: u64 = 200;
+pub async fn fetch_metadata(
+    mint: &Pubkey,
+    api_url: &str,
+) -> Result<PumpTokenInfo> {
+    let url = format!("{}{}", api_url, mint.to_string());
 
-    let mut retry_count = 0;
-    let mut delay_ms = INITIAL_DELAY_MS;
+    let client = reqwest::Client::new();
+    let response = client.get(&url).send().await?;
 
-    loop {
-        match fetch_metadata_inner(mint).await {
-            Ok(metadata) => {
-                info!("Metadata fetched successfully");
-                return Ok(metadata);
-            }
-            Err(e) => {
-                if retry_count >= MAX_RETRIES {
-                    info!("Failed to fetch metadata after all retries");
-                    return Err(e);
-                }
-                info!(
-                    "Retry attempt {} failed: {:?}. Retrying in {} ms...",
-                    retry_count + 1,
-                    e,
-                    delay_ms
-                );
-                tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-                retry_count += 1;
-                delay_ms *= 2; // Exponential backoff
-            }
-        }
+    if !response.status().is_success() {
+        return Err(anyhow!(
+            "Failed to fetch token info: {}",
+            response.status()
+        ));
     }
-}
 
-async fn fetch_metadata_inner(mint: &Pubkey) -> Result<PumpTokenInfo> {
-    let url = format!("https://frontend-api.pump.fun/coins/{}", mint);
-    let res = reqwest::get(&url).await?;
-    let data = res.json::<serde_json::Value>().await?;
-    Ok(serde_json::from_value(data)?)
+    let token_info: PumpTokenInfo = response.json().await?;
+    Ok(token_info)
 }
 
 #[cfg(test)]
@@ -714,6 +696,7 @@ mod tests {
         let metadata = fetch_metadata(
             &Pubkey::from_str("4cRkQ2dntpusYag6Zmvco8T78WxK9Jqh1eEZJox8pump")
                 .expect("parse mint"),
+            "https://frontend-api-v3.pump.fun/coins/",
         )
         .await
         .expect("fetch_metadata");

@@ -10,7 +10,9 @@ pub async fn scan(mint: String) -> Result<String> {
         Ok(pubkey) => pubkey,
         Err(e) => return Err(anyhow!(e.to_string())),
     };
-    let metadata = fetch_metadata(&pubkey).await?;
+    let metadata =
+        fetch_metadata(&pubkey, "https://frontend-api-v3.pump.fun/coins/")
+            .await?;
     // could check the deploy history of creator here too
     // let _raw_response = vec![];
     if let Some(twitter) = metadata.twitter {

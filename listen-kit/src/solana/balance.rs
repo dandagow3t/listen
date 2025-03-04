@@ -69,7 +69,7 @@ pub async fn get_balance(
         spl_associated_token_account::get_associated_token_address(
             &owner, &mint,
         );
-    tracing::debug!("token account: {}", token_account);
     let ata = rpc_client.get_token_account_balance(&token_account).await?;
+    tracing::info!("get_balance for {}, {}", token_account, ata.amount);
     Ok(ata.amount)
 }
